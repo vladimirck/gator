@@ -2,7 +2,7 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -16,7 +16,6 @@ type Config struct {
 }
 
 func Read() (Config, error) {
-	fmt.Printf("Hello World!\n")
 	config := Config{}
 	currentUser, err := user.Current()
 
@@ -26,7 +25,7 @@ func Read() (Config, error) {
 
 	fullPath := filepath.Join(currentUser.HomeDir, configFileName)
 
-	fmt.Printf("Home: %v\n", fullPath)
+	//fmt.Printf("Home: %v\n", fullPath)
 
 	configFile, err := os.Open(fullPath)
 	if err != nil {
@@ -44,21 +43,29 @@ func Read() (Config, error) {
 
 func (cfg *Config) SetUser(username string) error {
 	cfg.CurrentUserName = username
-	configFile, err := os.Open(configFileName)
+	currentUser, err := user.Current()
+
 	if err != nil {
 		return err
+	}
+
+	fullPath := filepath.Join(currentUser.HomeDir, configFileName)
+
+	configFile, err := os.OpenFile(fullPath, os.O_RDWR|os.O_TRUNC, 0644)
+	if err != nil {
+		return errors.New("the file " + fullPath + " cannot be opened\n")
 	}
 	defer configFile.Close()
 
 	jsonConfig, err := json.Marshal(cfg)
 	if err != nil {
-		return err
+		return errors.New("the conifuration could not be marshaled into a json format\n")
 	}
 
 	_, err = configFile.Write(jsonConfig)
 
 	if err != nil {
-		return err
+		return errors.New("the configuration file could not be written into\n")
 	}
 
 	return nil
